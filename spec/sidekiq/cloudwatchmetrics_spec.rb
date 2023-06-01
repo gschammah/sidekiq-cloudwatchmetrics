@@ -79,6 +79,8 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
         {
           "foo" => double(size: 1, latency: 1.23),
           "bar" => double(size: 2, latency: 1.23),
+          "sidekiq-alive-ip-172-31-71-144.ec2.internal" => double(size: 3, latency: 1.23),
+          "sidekiq-alive-ip-21-12-7-134.ec2.internal" => double(size: 3, latency: 1.23)
         }
       end
 

@@ -205,6 +205,8 @@ module Sidekiq::CloudWatchMetrics
       end
 
       queues.each do |(queue_name, queue_size)|
+        next if queue_name =~ /sidekiq-alive/
+
         metrics << {
           metric_name: "QueueSize",
           dimensions: [{name: "QueueName", value: queue_name}],
