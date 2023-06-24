@@ -73,17 +73,17 @@ module Sidekiq::CloudWatchMetrics
       now = Time.now.to_f
       tick = now
       until @stop
-        should_publish = @config.redis { |redis| redis.get("cloudwatch_metrics:fresh") }
+        already_published = Sidekiq.redis { |redis| redis.get("cloudwatch_metrics:fresh") }
 
-        if should_publish.nil?
+        if already_published
+          logger.info { "No Sidekiq CloudWatch Metrics to publish" }
+        else
           logger.info { "Publishing Sidekiq CloudWatch Metrics" }
           publish
-        else
-          logger.info { "No Sidekiq CloudWatch Metrics to publish" }
         end
 
         now = Time.now.to_f
-        tick = [tick + INTERVAL, now].max
+        tick = [tick + INTERVAL / 2, now].max
         sleep(tick - now) if tick > now
       end
 
@@ -91,6 +91,8 @@ module Sidekiq::CloudWatchMetrics
     end
 
     def publish
+      @config.redis { |redis| redis.set("cloudwatch_metrics:fresh", 1, ex: INTERVAL) }
+
       now = Time.now
       stats = Sidekiq::Stats.new
       processes = Sidekiq::ProcessSet.new.to_enum(:each).to_a
@@ -245,8 +247,6 @@ module Sidekiq::CloudWatchMetrics
           metric_data: some_metrics,
         )
       end
-
-      @config.redis { |redis| redis.set("cloudwatch_metrics:fresh", 1, ex: INTERVAL) }
     end
 
     # Returns the total number of workers across all processes
