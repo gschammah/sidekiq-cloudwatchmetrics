@@ -73,12 +73,13 @@ module Sidekiq::CloudWatchMetrics
       now = Time.now.to_f
       tick = now
       until @stop
-        already_published = Sidekiq.redis { |redis| redis.get("cloudwatch_metrics:fresh") }
+        already_published = @config.redis { |redis| redis.get("cloudwatch_metrics:fresh") }
 
         if already_published
           logger.info { "No Sidekiq CloudWatch Metrics to publish" }
         else
           logger.info { "Publishing Sidekiq CloudWatch Metrics" }
+          @config.redis { |redis| redis.set("cloudwatch_metrics:fresh", 1, ex: INTERVAL) }
           publish
         end
 
@@ -91,8 +92,6 @@ module Sidekiq::CloudWatchMetrics
     end
 
     def publish
-      @config.redis { |redis| redis.set("cloudwatch_metrics:fresh", 1, ex: INTERVAL) }
-
       now = Time.now
       stats = Sidekiq::Stats.new
       processes = Sidekiq::ProcessSet.new.to_enum(:each).to_a
