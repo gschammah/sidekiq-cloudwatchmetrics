@@ -79,12 +79,12 @@ module Sidekiq::CloudWatchMetrics
           logger.info { "No Sidekiq CloudWatch Metrics to publish" }
         else
           logger.info { "Publishing Sidekiq CloudWatch Metrics" }
-          @config.redis { |redis| redis.set("cloudwatch_metrics:fresh", 1, ex: INTERVAL) }
+          @config.redis { |redis| redis.set("cloudwatch_metrics:fresh", 1, ex: INTERVAL - 5) }
           publish
         end
 
         now = Time.now.to_f
-        tick = [tick + INTERVAL / 2, now].max
+        tick = [tick + INTERVAL / 6, now].max
         sleep(tick - now) if tick > now
       end
 
