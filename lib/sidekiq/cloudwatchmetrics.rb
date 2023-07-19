@@ -45,7 +45,7 @@ module Sidekiq::CloudWatchMetrics
 
     INTERVAL = 60 # seconds
 
-    def initialize(config: Sidekiq, client: Aws::CloudWatch::Client.new, namespace: "Sidekiq", process_metrics: true, additional_dimensions: {})
+    def initialize(config: Sidekiq, client: Aws::CloudWatch::Client.new, namespace: "Sidekiq", process_metrics: false, additional_dimensions: {})
       # Sidekiq 6.5+ requires @config, which defaults to the top-level
       # `Sidekiq` module, but can be overridden when running multiple Sidekiqs.
       @config = config
@@ -117,77 +117,41 @@ module Sidekiq::CloudWatchMetrics
           unit: "Count",
         },
         {
-          metric_name: "ScheduledJobs",
-          timestamp: now,
-          value: stats.scheduled_size,
-          unit: "Count",
-        },
-        {
-          metric_name: "RetryJobs",
-          timestamp: now,
-          value: stats.retry_size,
-          unit: "Count",
-        },
-        {
-          metric_name: "DeadJobs",
-          timestamp: now,
-          value: stats.dead_size,
-          unit: "Count",
-        },
-        {
-          metric_name: "Workers",
-          timestamp: now,
-          value: stats.workers_size,
-          unit: "Count",
-        },
-        {
-          metric_name: "Processes",
-          timestamp: now,
-          value: stats.processes_size,
-          unit: "Count",
-        },
-        {
           metric_name: "DefaultQueueLatency",
           timestamp: now,
           value: stats.default_queue_latency,
           unit: "Seconds",
-        },
-        {
-          metric_name: "Capacity",
-          timestamp: now,
-          value: calculate_capacity(processes),
-          unit: "Count",
-        },
+        }
       ]
 
-      utilization = calculate_utilization(processes) * 100.0
+      # utilization = calculate_utilization(processes) * 100.0
 
-      unless utilization.nan?
-        metrics << {
-          metric_name: "Utilization",
-          timestamp: now,
-          value: utilization,
-          unit: "Percent",
-        }
-      end
+      # unless utilization.nan?
+      #   metrics << {
+      #     metric_name: "Utilization",
+      #     timestamp: now,
+      #     value: utilization,
+      #     unit: "Percent",
+      #   }
+      # end
 
-      processes.group_by do |process|
-        process["tag"]
-      end.each do |(tag, tag_processes)|
-        next if tag.nil?
+      # processes.group_by do |process|
+      #   process["tag"]
+      # end.each do |(tag, tag_processes)|
+      #   next if tag.nil?
 
-        tag_utilization = calculate_utilization(tag_processes) * 100.0
+      #   tag_utilization = calculate_utilization(tag_processes) * 100.0
 
-        unless tag_utilization.nan?
-          metrics << {
-            metric_name: "Utilization",
-            dimensions: [{name: "Tag", value: tag}],
-            timestamp: now,
-            value: tag_utilization,
-            unit: "Percent",
-          }
-        end
-      end
+      #   unless tag_utilization.nan?
+      #     metrics << {
+      #       metric_name: "Utilization",
+      #       dimensions: [{name: "Tag", value: tag}],
+      #       timestamp: now,
+      #       value: tag_utilization,
+      #       unit: "Percent",
+      #     }
+      #   end
+      # end
 
       if @process_metrics
         processes.each do |process|

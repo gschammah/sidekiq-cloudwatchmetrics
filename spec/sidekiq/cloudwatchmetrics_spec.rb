@@ -115,68 +115,68 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
                 value: 6,
                 unit: "Count",
               },
-              {
-                metric_name: "ScheduledJobs",
-                timestamp: now,
-                value: 1,
-                unit: "Count",
-              },
-              {
-                metric_name: "RetryJobs",
-                timestamp: now,
-                value: 2,
-                unit: "Count",
-              },
-              {
-                metric_name: "DeadJobs",
-                timestamp: now,
-                value: 3,
-                unit: "Count",
-              },
-              {
-                metric_name: "Workers",
-                timestamp: now,
-                value: 10,
-                unit: "Count",
-              },
-              {
-                metric_name: "Processes",
-                timestamp: now,
-                value: 5,
-                unit: "Count",
-              },
-              {
-                metric_name: "Capacity",
-                timestamp: now,
-                value: 30,
-                unit: "Count",
-              },
+              # {
+              #   metric_name: "ScheduledJobs",
+              #   timestamp: now,
+              #   value: 1,
+              #   unit: "Count",
+              # },
+              # {
+              #   metric_name: "RetryJobs",
+              #   timestamp: now,
+              #   value: 2,
+              #   unit: "Count",
+              # },
+              # {
+              #   metric_name: "DeadJobs",
+              #   timestamp: now,
+              #   value: 3,
+              #   unit: "Count",
+              # },
+              # {
+              #   metric_name: "Workers",
+              #   timestamp: now,
+              #   value: 10,
+              #   unit: "Count",
+              # },
+              # {
+              #   metric_name: "Processes",
+              #   timestamp: now,
+              #   value: 5,
+              #   unit: "Count",
+              # },
+              # {
+              #   metric_name: "Capacity",
+              #   timestamp: now,
+              #   value: 30,
+              #   unit: "Count",
+              # },
               {
                 metric_name: "DefaultQueueLatency",
                 timestamp: now,
                 value: 1.23,
                 unit: "Seconds",
               },
-              {
-                metric_name: "Utilization",
-                timestamp: now,
-                value: 30.0,
-                unit: "Percent",
-              },
-              {
-                metric_name: "Utilization",
-                dimensions: [{name: "Hostname", value: "foo"}],
-                timestamp: now,
-                unit: "Percent",
-                value: 50.0,
-              },
-              {
-                metric_name: "Utilization",
-                dimensions: [{name: "Hostname", value: "bar"}],
-                timestamp: now,
-                unit: "Percent",
-                value: 10.0,
-              },
+              # {
+              #   metric_name: "Utilization",
+              #   timestamp: now,
+              #   value: 30.0,
+              #   unit: "Percent",
+              # },
+              # {
+              #   metric_name: "Utilization",
+              #   dimensions: [{name: "Hostname", value: "foo"}],
+              #   timestamp: now,
+              #   unit: "Percent",
+              #   value: 50.0,
+              # },
+              # {
+              #   metric_name: "Utilization",
+              #   dimensions: [{name: "Hostname", value: "bar"}],
+              #   timestamp: now,
+              #   unit: "Percent",
+              #   value: 10.0,
+              # },
               {
                 metric_name: "QueueSize",
                 dimensions: [{name: "QueueName", value: "foo"}],
@@ -239,40 +239,40 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
             expect(client).to have_received(:put_metric_data).with(
               namespace: "Sidekiq",
               metric_data: include(
-                {
-                  metric_name: "Utilization",
-                  timestamp: now,
-                  value: 30.0,
-                  unit: "Percent",
-                },
-                {
-                  metric_name: "Utilization",
-                  dimensions: [{name: "Tag", value: "default"}],
-                  timestamp: now,
-                  value: 50.0,
-                  unit: "Percent",
-                },
-                {
-                  metric_name: "Utilization",
-                  dimensions: [{name: "Tag", value: "shard-one"}],
-                  timestamp: now,
-                  value: 10.0,
-                  unit: "Percent",
-                },
-                {
-                  metric_name: "Utilization",
-                  dimensions: [{name: "Hostname", value: "foo"}, {name: "Tag", value: "default"}],
-                  timestamp: now,
-                  unit: "Percent",
-                  value: 50.0,
-                },
-                {
-                  metric_name: "Utilization",
-                  dimensions: [{name: "Hostname", value: "bar"}, {name: "Tag", value: "shard-one"}],
-                  timestamp: now,
-                  unit: "Percent",
-                  value: 10.0,
-                },
+                # {
+                #   metric_name: "Utilization",
+                #   timestamp: now,
+                #   value: 30.0,
+                #   unit: "Percent",
+                # },
+                # {
+                #   metric_name: "Utilization",
+                #   dimensions: [{name: "Tag", value: "default"}],
+                #   timestamp: now,
+                #   value: 50.0,
+                #   unit: "Percent",
+                # },
+                # {
+                #   metric_name: "Utilization",
+                #   dimensions: [{name: "Tag", value: "shard-one"}],
+                #   timestamp: now,
+                #   value: 10.0,
+                #   unit: "Percent",
+                # },
+                # {
+                #   metric_name: "Utilization",
+                #   dimensions: [{name: "Hostname", value: "foo"}, {name: "Tag", value: "default"}],
+                #   timestamp: now,
+                #   unit: "Percent",
+                #   value: 50.0,
+                # },
+                # {
+                #   metric_name: "Utilization",
+                #   dimensions: [{name: "Hostname", value: "bar"}, {name: "Tag", value: "shard-one"}],
+                #   timestamp: now,
+                #   unit: "Percent",
+                #   value: 10.0,
+                # },
               ),
             )
           end
@@ -351,19 +351,19 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
               utilization_data = metrics[:metric_data].select { |data| data[:metric_name] == "Utilization" }
 
               expect(utilization_data).to contain_exactly(
-                {
-                  metric_name: "Utilization",
-                  timestamp: now,
-                  value: 50.0,
-                  unit: "Percent",
-                },
-                {
-                  metric_name: "Utilization",
-                  dimensions: [{name: "Hostname", value: "bar"}],
-                  timestamp: now,
-                  unit: "Percent",
-                  value: 50.0,
-                },
+                # {
+                #   metric_name: "Utilization",
+                #   timestamp: now,
+                #   value: 50.0,
+                #   unit: "Percent",
+                # },
+                # {
+                #   metric_name: "Utilization",
+                #   dimensions: [{name: "Hostname", value: "bar"}],
+                #   timestamp: now,
+                #   unit: "Percent",
+                #   value: 50.0,
+                # },
               )
             }
           end
@@ -381,12 +381,12 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
               utilization_data = metrics[:metric_data].select { |data| data[:metric_name] == "Utilization" }
 
               expect(utilization_data).to contain_exactly(
-                {
-                  metric_name: "Utilization",
-                  timestamp: now,
-                  value: 30.0,
-                  unit: "Percent",
-                },
+                # {
+                #   metric_name: "Utilization",
+                #   timestamp: now,
+                #   value: 30.0,
+                #   unit: "Percent",
+                # },
               )
             }
           end
