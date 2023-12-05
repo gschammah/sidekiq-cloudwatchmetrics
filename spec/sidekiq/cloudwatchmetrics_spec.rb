@@ -84,10 +84,23 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
         }
       end
 
+      let(:workers) do
+        [
+          ["ip-172-31-22-85.ec2.internal:1:12bceede715c",
+          "jnt",
+          {"queue"=>"foo",
+          "payload"=>
+            "{\"retry\":true,\"queue\":\"default\",\"class\":\"ActiveJob::QueueAdapters::SidekiqAdapter::JobWrapper\",\"wrapped\":\"FixMaxDurationExceededBookings\",\"args\":[{\"job_class\":\"FixMaxDurationExceededBookings\",\"job_id\":\"26361d37-53b3-4f05-9642-cc2c700905c0\",\"provider_job_id\":null,\"queue_name\":\"default\",\"priority\":null,\"arguments\":[],\"executions\":0,\"exception_executions\":{},\"locale\":\"en\",\"timezone\":\"UTC\",\"enqueued_at\":\"2023-12-05T10:00:41Z\"}],\"jid\":\"4e8aeeae1dfb9673ed2226e5\",\"created_at\":1701770441.14493,\"enqueued_at\":1701770441.1450117}",
+          "run_at"=>1701817729}]
+        ]
+      end
+
+
       before do
         allow(Sidekiq::Stats).to receive(:new).and_return(stats)
         allow(Sidekiq::ProcessSet).to receive(:new).and_return(processes)
         allow(Sidekiq::Queue).to receive(:new) { |name| queues.fetch(name) }
+        allow(Sidekiq::Workers).to receive(:new).and_return(workers)
       end
 
       it "publishes sidekiq metrics to cloudwatch" do
@@ -181,7 +194,7 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
                 metric_name: "QueueSize",
                 dimensions: [{name: "QueueName", value: "foo"}],
                 timestamp: now,
-                value: 1,
+                value: 2,
                 unit: "Count",
               },
               {

@@ -95,6 +95,7 @@ module Sidekiq::CloudWatchMetrics
       now = Time.now
       stats = Sidekiq::Stats.new
       processes = Sidekiq::ProcessSet.new.to_enum(:each).to_a
+      workers = Sidekiq::Workers.new.map { |_a, _b, c| c }.group_by { |w| w["queue"] }
       queues = stats.queues
 
       metrics = [
@@ -178,11 +179,13 @@ module Sidekiq::CloudWatchMetrics
       queues.each do |(queue_name, queue_size)|
         next if queue_name =~ /sidekiq-alive/
 
+        busy_size = workers[queue_name]&.size || 0
+
         metrics << {
           metric_name: "QueueSize",
           dimensions: [{name: "QueueName", value: queue_name}],
           timestamp: now,
-          value: queue_size,
+          value: queue_size + busy_size,
           unit: "Count",
         }
 
