@@ -45,7 +45,7 @@ module Sidekiq::CloudWatchMetrics
 
     INTERVAL = 60 # seconds
 
-    def initialize(config: Sidekiq, client: Aws::CloudWatch::Client.new, namespace: "Sidekiq", process_metrics: false, additional_dimensions: {})
+    def initialize(config: Sidekiq::default_configuration, client: Aws::CloudWatch::Client.new, namespace: "Sidekiq", process_metrics: false, additional_dimensions: {})
       # Sidekiq 6.5+ requires @config, which defaults to the top-level
       # `Sidekiq` module, but can be overridden when running multiple Sidekiqs.
       @config = config
