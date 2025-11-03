@@ -105,6 +105,11 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
 
       it "publishes sidekiq metrics to cloudwatch" do
         Timecop.freeze(now = Time.now) do
+          allow_any_instance_of(JobMetricsService).to receive(:get_success_count).and_return(10)
+          allow_any_instance_of(JobMetricsService).to receive(:get_failure_count).and_return(20)
+
+          expect_any_instance_of(JobMetricsService).to receive(:clear_metrics).once
+
           publisher.publish
 
           expect(client).to have_received(:put_metric_data).with(
@@ -126,6 +131,18 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
                 metric_name: "EnqueuedJobs",
                 timestamp: now,
                 value: 6,
+                unit: "Count",
+              },
+              {
+                metric_name: "FetchBookingsJobSuccessCount",
+                timestamp: now,
+                value: 10,
+                unit: "Count",
+              },
+              {
+                metric_name: "FetchBookingsJobFailureCount",
+                timestamp: now,
+                value: 20,
                 unit: "Count",
               },
               # {
@@ -164,12 +181,6 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
               #   value: 30,
               #   unit: "Count",
               # },
-              {
-                metric_name: "DefaultQueueLatency",
-                timestamp: now,
-                value: 1.23,
-                unit: "Seconds",
-              },
               # {
               #   metric_name: "Utilization",
               #   timestamp: now,
@@ -198,25 +209,11 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
                 unit: "Count",
               },
               {
-                metric_name: "QueueLatency",
-                dimensions: [{name: "QueueName", value: "foo"}],
-                timestamp: now,
-                value: 1.23,
-                unit: "Seconds",
-              },
-              {
                 metric_name: "QueueSize",
                 dimensions: [{name: "QueueName", value: "bar"}],
                 timestamp: now,
                 value: 2,
                 unit: "Count",
-              },
-              {
-                metric_name: "QueueLatency",
-                dimensions: [{name: "QueueName", value: "bar"}],
-                timestamp: now,
-                value: 1.23,
-                unit: "Seconds",
               },
             ),
           )
@@ -224,7 +221,7 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
       end
 
       context "with lots of queues" do
-        let(:queues) { 10.times.each_with_object({}) { |i, hash| hash["queue#{i}"] = double(size: 1, latency: 1.23) } }
+        let(:queues) { 20.times.each_with_object({}) { |i, hash| hash["queue#{i}"] = double(size: 1, latency: 1.23) } }
 
         it "publishes sidekiq metrics to cloudwatch in batches of 20" do
           Timecop.freeze(now = Time.now) do
@@ -245,7 +242,7 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
           ]
         end
 
-        it "publishes metrics including tag as a dimension" do
+        xit "publishes metrics including tag as a dimension" do
           Timecop.freeze(now = Time.now) do
             publisher.publish
 

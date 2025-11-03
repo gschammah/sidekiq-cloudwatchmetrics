@@ -5,6 +5,47 @@ require "sidekiq/api"
 
 require "aws-sdk-cloudwatch"
 
+class JobMetricsService
+  REDIS_KEY_PREFIX = "job_metrics"
+
+  def initialize(job_name)
+    @job_name = job_name
+    @redis = Sidekiq::default_configuration
+  end
+
+  def track_success
+    increment_counter("#{REDIS_KEY_PREFIX}:#{@job_name}:success")
+  end
+
+  def track_failure
+    increment_counter("#{REDIS_KEY_PREFIX}:#{@job_name}:failure")
+  end
+
+  def get_success_count
+    get_counter("#{REDIS_KEY_PREFIX}:#{@job_name}:success")
+  end
+
+  def get_failure_count
+    get_counter("#{REDIS_KEY_PREFIX}:#{@job_name}:failure")
+  end
+
+  def clear_metrics
+    @redis.redis { |redis| redis.del("#{REDIS_KEY_PREFIX}:#{@job_name}:success") }
+    @redis.redis { |redis| redis.del("#{REDIS_KEY_PREFIX}:#{@job_name}:failure") }
+  end
+
+  private
+
+  def increment_counter(key)
+    @redis.redis { |redis| redis.incr(key) }
+
+  end
+
+  def get_counter(key)
+    @redis.redis { |redis| redis.get(key).to_i }
+  end
+end
+
 module Sidekiq::CloudWatchMetrics
   def self.enable!(**kwargs)
     Sidekiq.configure_server do |config|
@@ -52,6 +93,7 @@ module Sidekiq::CloudWatchMetrics
       @client = client
       @namespace = namespace
       @process_metrics = process_metrics
+      @fetch_bookings_job_metrics = JobMetricsService.new('fetch_bookings')
       @additional_dimensions = additional_dimensions.map { |k, v| {name: k.to_s, value: v.to_s} }
     end
 
@@ -122,10 +164,16 @@ module Sidekiq::CloudWatchMetrics
           unit: "Count",
         },
         {
-          metric_name: "DefaultQueueLatency",
+          metric_name: "FetchBookingsJobSuccessCount",
           timestamp: now,
-          value: stats.default_queue_latency,
-          unit: "Seconds",
+          value: @fetch_bookings_job_metrics.get_success_count,
+          unit: "Count",
+        },
+        {
+          metric_name: "FetchBookingsJobFailureCount",
+          timestamp: now,
+          value: @fetch_bookings_job_metrics.get_failure_count,
+          unit: "Count",
         }
       ]
 
@@ -192,16 +240,6 @@ module Sidekiq::CloudWatchMetrics
           value: queue_size + busy_size,
           unit: "Count",
         }
-
-        queue_latency = Sidekiq::Queue.new(queue_name).latency
-
-        metrics << {
-          metric_name: "QueueLatency",
-          dimensions: [{name: "QueueName", value: queue_name}],
-          timestamp: now,
-          value: queue_latency,
-          unit: "Seconds",
-        }
       end
 
       unless @additional_dimensions.empty?
@@ -217,6 +255,8 @@ module Sidekiq::CloudWatchMetrics
           metric_data: some_metrics,
         )
       end
+
+      @fetch_bookings_job_metrics.clear_metrics
     end
 
     # Returns the total number of workers across all processes
