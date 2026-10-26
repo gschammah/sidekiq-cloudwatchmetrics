@@ -141,7 +141,7 @@ module Sidekiq::CloudWatchMetrics
       now = Time.now
       stats = Sidekiq::Stats.new
       processes = Sidekiq::ProcessSet.new.to_enum(:each).to_a
-      workers = Sidekiq::Workers.new.map { |_a, _b, c| c }.group_by { |w| w["queue"] }
+      workers = Sidekiq::Workers.new.map { |_a, _b, work| work }.group_by { |work| work_queue(work) }
       queues = stats.queues
 
       metrics = [
@@ -257,6 +257,12 @@ module Sidekiq::CloudWatchMetrics
       end
 
       @fetch_bookings_job_metrics.clear_metrics
+    end
+
+    # Sidekiq 7.2+ yields Sidekiq::Work (#queue, #payload, #run_at).
+    # Sidekiq 8 removed Hash-style #[]. Older Sidekiq still yields a Hash.
+    private def work_queue(work)
+      work.respond_to?(:queue) ? work.queue : work["queue"]
     end
 
     # Returns the total number of workers across all processes
