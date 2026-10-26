@@ -103,6 +103,112 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
         allow(Sidekiq::Workers).to receive(:new).and_return(workers)
       end
 
+      # Sidekiq 8's WorkSet yields Sidekiq::Work, which does not implement #[].
+      # Older Sidekiq yields a Hash; that path stays covered by the example below.
+      if defined?(Sidekiq::Work)
+        context "when busy jobs are Sidekiq::Work objects" do
+          let(:workers) do
+            [
+              sidekiq_work("foo", "thread-foo-1"),
+              sidekiq_work("foo", "thread-foo-2"),
+              sidekiq_work("bar", "thread-bar"),
+              sidekiq_work("sidekiq-alive-ip-172-31-71-144.ec2.internal", "thread-alive"),
+              sidekiq_work("only-busy", "thread-only-busy"),
+            ]
+          end
+
+          def sidekiq_work(queue, thread_id)
+            payload = {
+              "retry" => true,
+              "queue" => queue,
+              "class" => "FetchBookings",
+              "args" => [],
+              "jid" => "jid-#{thread_id}",
+            }.to_json
+
+            [
+              "ip-172-31-22-85.ec2.internal:1:12bceede715c",
+              thread_id,
+              Sidekiq::Work.new(
+                "ip-172-31-22-85.ec2.internal:1:12bceede715c",
+                thread_id,
+                {
+                  "queue" => queue,
+                  "payload" => payload,
+                  "run_at" => 1701817729,
+                },
+              ),
+            ]
+          end
+
+          it "publishes the exact CloudWatch payload" do
+            Timecop.freeze(now = Time.now) do
+              work = workers.first.last
+              expect(work).to be_a(Sidekiq::Work)
+              expect(work.queue).to eq("foo")
+              expect(JSON.parse(work.payload).fetch("class")).to eq("FetchBookings")
+              expect(work.run_at).to eq(Time.at(1701817729))
+
+              allow_any_instance_of(JobMetricsService).to receive(:get_success_count).and_return(10)
+              allow_any_instance_of(JobMetricsService).to receive(:get_failure_count).and_return(20)
+              expect_any_instance_of(JobMetricsService).to receive(:clear_metrics).once
+
+              publisher.publish
+
+              expect(client).to have_received(:put_metric_data).once.with(
+                namespace: "Sidekiq",
+                metric_data: [
+                  {
+                    metric_name: "ProcessedJobs",
+                    timestamp: now,
+                    value: 123,
+                    unit: "Count",
+                  },
+                  {
+                    metric_name: "FailedJobs",
+                    timestamp: now,
+                    value: 456,
+                    unit: "Count",
+                  },
+                  {
+                    metric_name: "EnqueuedJobs",
+                    timestamp: now,
+                    value: 6,
+                    unit: "Count",
+                  },
+                  {
+                    metric_name: "FetchBookingsJobSuccessCount",
+                    timestamp: now,
+                    value: 10,
+                    unit: "Count",
+                  },
+                  {
+                    metric_name: "FetchBookingsJobFailureCount",
+                    timestamp: now,
+                    value: 20,
+                    unit: "Count",
+                  },
+                  {
+                    metric_name: "QueueSize",
+                    dimensions: [{name: "QueueName", value: "foo"}],
+                    timestamp: now,
+                    value: 3,
+                    unit: "Count",
+                  },
+                  {
+                    metric_name: "QueueSize",
+                    dimensions: [{name: "QueueName", value: "bar"}],
+                    timestamp: now,
+                    value: 3,
+                    unit: "Count",
+                  },
+                ],
+              )
+            end
+          end
+        end
+      end
+
       it "publishes sidekiq metrics to cloudwatch" do
         Timecop.freeze(now = Time.now) do
           allow_any_instance_of(JobMetricsService).to receive(:get_success_count).and_return(10)
